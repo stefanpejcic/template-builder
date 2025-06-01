@@ -44,9 +44,12 @@
 	 		'mylinkpreview': '<a target="_blank" href="/static/template-builder/https://mylinkpreview.com/">MylinkPreview</a> Blocks'
 	 	}
 
-	 	const editor = grapesjs.init({
-	 		container : '#gjs',
-	 		height: '100vh',
+		const editor = grapesjs.init({
+		  container : '#gjs',
+		  height: '100vh',
+		  fromElement: false,
+		  components: `{{ html|safe }}`,
+		  style: `{{ css|safe }}`,
 			
 			canvas: {
 				styles: [
@@ -64,23 +67,45 @@
 				'customizeDevices',
 				'customizeOptions',
 				'customizeViews',
-				// Plugin temporary code
 				editor => {
-
+					editor.Panels.addButton('options', [{
+						id: 'save-button',
+						className: 'fa fa-save',
+						command: 'save-content',
+						attributes: { title: 'Save template' }
+					}]);
+				
+					editor.Commands.add('save-content', {
+						run(editor, sender) {
+							sender && sender.set('active', 0);
+							const html = editor.getHtml();
+							const css = editor.getCss();
+				
+							fetch(window.location.href, {
+								method: "POST",
+								headers: {
+									"Content-Type": "application/x-www-form-urlencoded"
+								},
+								body: new URLSearchParams({
+									html: html,
+									css: css
+								})
+							}).then(res => {
+								if (res.ok) {
+									UIkit.notification("Template saved!", "success");
+								} else {
+									UIkit.notification("Failed to save.", "danger");
+								}
+							}).catch(() => {
+								UIkit.notification("Error while saving.", "danger");
+							});
+						}
+					});
 				},
+
 			],
 
-			storageManager: {
-				type: 'remote',
-				autosave: true,         // Store data automatically
-				stepsBeforeSave: 1,
-				contentTypeJson: true,
-				urlStore: '/static/template-builder/storage/save.php',
-				urlLoad: '/static/template-builder/storage/save.php',
-			}
-
-			// Disable the storage manager for the moment
-  			// storageManager: false,
+			storageManager: false,
 	 	});
 
 	 	// Vars for other scripts like pages.js, elements.js
